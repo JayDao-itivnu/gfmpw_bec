@@ -82,9 +82,9 @@ user_proj_example mprj (
 
     // Logic Analyzer
 
-    .la_data_in(la_data_in),
+    .la_data_in(la_data_in[36:32]),
     .la_data_out(la_data_out),
-    .la_oenb (la_oenb)
+    .la_oenb (la_oenb[63:32])
 
     // .io_in (io_in[0])
     // .io_out(io_out[2:0])

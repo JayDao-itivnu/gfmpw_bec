@@ -11,7 +11,9 @@ module add(
 reg reg_done;
 reg [9:0] count;
 
-parameter IDLE = 2'b00, BUSY = 2'b10, DONE = 2'b11;
+localparam IDLE = 2'b00;
+localparam BUSY = 2'b10;
+localparam DONE = 2'b11;
 // assign busy = (current_state == BUSY) ? 1 : 0;
 
 assign done = reg_done;
