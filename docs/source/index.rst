@@ -69,38 +69,36 @@ Quickstart
 Starting your project
 ---------------------
 
-#. To start the project you first need to create a new repository based on the `caravel_user_project <https://github.com/efabless/caravel_user_project/>`_ template and make sure your repo is public and includes a README.
+#. To start the project you first need to create a new repository based on the `caravel_user_project <https://github.com/efabless/caravel_user_project/>`_ and make sure your repo is public and includes a README.
 
-   *   Follow https://github.com/efabless/caravel_user_project/generate to create a new repository.
+# NOTE:  You cannot use the create from template feature as this points to main branch based on SKY130.
+
+   *   Create a blank repo for your project on github.  Copy the URL for the new project from github.
+   
    *   Clone the reposity using the following command:
    
        .. code:: bash
         
-    	git clone <your github repo URL>
+    	git clone -b gfmpw-0d https://github.com/efabless/caravel_user_project.git <my_project>
+	
+	cd <my_project>
+	
+	git remote add MYREPO <repo URL for your project>
+	
+	git push MYREPO
 	
 #.  To setup your local environment run:
 
     .. code:: bash
     
     	cd <project_name> # project_name is the name of your repo
-
-	# export the PDK variant depending on your shuttle, if you don't know leave it to the default
-	
-	# for sky130 MPW shuttles....
-	export PDK=sky130A
-	
-	# for the gf180 GFMPW shuttles...
-	export PDK=gf180mcuC
-
-
-
-        make setup
+      make setup
 
 *   This command will setup your environment by installing the following
     
     - caravel_lite (a lite version of caravel)
     - management core for simulation
-    - openlane to harden your design 
+    - OpenLane to harden your design 
     - pdk
 
 	
@@ -108,7 +106,7 @@ Starting your project
 
     *   To start hardening you project you need 
         - RTL verilog model for your design for OpenLane to harden
-        - A subdirectory for each macro in your project under ``openlane/`` directory, each subdirectory should include openlane configuration files for the macro
+        - A subdirectory for each macro in your project under ``openlane/`` directory, each subdirectory should include OpenLane configuration files for the macro
 
         .. code:: bash
 
@@ -119,7 +117,7 @@ Starting your project
 	
 #.  Integrate modules into the user_project_wrapper
 
-    *   Change the environment variables ``VERILOG_FILES_BLACKBOX``, ``EXTRA_LEFS`` and ``EXTRA_GDS_FILES`` in ``openlane/user_project_wrapper/config.tcl`` to point to your module
+    *   Change the variables ``VERILOG_FILES_BLACKBOX``, ``EXTRA_LEFS`` and ``EXTRA_GDS_FILES`` in ``openlane/user_project_wrapper/config.json`` to point to your module
     *   Instantiate your module(s) in ``verilog/rtl/user_project_wrapper.v``
     *   Harden the user_project_wrapper including your module(s), using this command:
 
@@ -131,46 +129,29 @@ Starting your project
 
     *   You need to include your rtl/gl/gl+sdf files in ``verilog/includes/includes.<rtl/gl/gl+sdf>.caravel_user_project``
 
-      **NOTE:** You shouldn't include the files inside the verilog code
+        **NOTE:** You shouldn't include the files inside the verilog code
 
         .. code:: bash
 
             # you can then run RTL simulations using
-            make verify-<testbench-name>-rtl
+            make cocotb-verify-<testbench-name>-rtl
 
-            # OR GL simulation using
-            make verify-<testbench-name>-gl
+            # To test all RTL simulations run
+            make cocotb-verify-all-rtl
 
-            # OR for GL+SDF simulation using 
-            # sdf annotated simulation is slow
-            make verify-<testbench-name>-gl-sdf
+            # you can then run GL simulations using
+            make cocotb-verify-<testbench-name>-gl
 
-            # for example
-            make verify-io_ports-rtl
+            # To test all GL simulations run
+            make cocotb-verify-all-gl
 
-#.  Run cocotb simulation on your design
+#.  Run OpenSTA on your design
 
-    * rtl/gl/gl+sdf files in ``verilog/includes/includes.<rtl/gl/gl+sdf>.caravel_user_project`` should be updated
-    * To run GL simulation script ``<caravel>/scripts/gen_gpio_defaults.py`` should be run to generate ``caravel_core.v``
-
-    * To make sure the cocotb flow works, run the following commands for testing the counter example
+    *   Extract spefs for ``user_project_wrapper`` and macros inside it:
 
         .. code:: bash
-            # To run all tests in user_project_tests list found at ``verilog/dv/cocotb/user_project_tests/user_project_tests.yaml``
-               # RTL tests
-               make cocotb-verify-all-rtl
-               # OR GL simulation using
-               make  cocotb-verify-all-gl
-            # To run any test under ``verilog/dv/cocotb/*``
-               # RTL
-               make cocotb-verify-<test_name>-rtl
-               # GL
-               make cocotb-verify-<test_name>-gl
-    * To run cocotb tests on your design, Follow the steps below
-        * Add cocotb tests under ``verilog/dv/cocotb`` follow steps at `Adding_cocotb_test <https://caravel-sim-infrastructure.readthedocs.io/en/latest/usage.html#adding-a-test>`_
-        * Run cocotb tests using ``caravel_cocotb`` command steps at `Running_cocotb_tests <https://caravel-sim-infrastructure.readthedocs.io/en/latest/usage.html#running-a-test>`_
 
-#.  Run opensta on your design
+            make caravel-extract-parasitics
 
     *   Extract spefs for ``user_project_wrapper`` and macros inside it:
 
@@ -184,7 +165,7 @@ Starting your project
 
             make create-spef-mapping
 
-    *   Run opensta:
+    *   Run OpenSTA:
 
         .. code:: bash
 
@@ -192,14 +173,6 @@ Starting your project
 
       **NOTE:** To update timing scripts run ``make setup-timing-scripts``
 
-#.  Run standalone LVS
-
-    .. code:: bash
-
-        make lvs-<macro_name> # macro is the name of the macro you want to run LVS on
-
-   **NOTE:** You have to create a new config file for each macro under ``lvs/<macro_name>/lvs_config.json``
-	
 #.  Run the precheck locally 
 
     .. code:: bash
@@ -210,6 +183,27 @@ Starting your project
 #. You are done! now go to https://efabless.com/open_shuttle_program/ to submit your project!
 
 
+Updating For New Release
+========================
+
+**NOTE: This is a temporary solution**
+
+
+To update the makefile to get updated PDK and OpenLane versions, you can run this command from the project root
+
+    .. code:: bash
+
+       curl https://raw.githubusercontent.com/efabless/caravel_user_project/gf180mcu/Makefile > Makefile
+
+OR
+
+To update ``precheck`` to the new release
+
+    .. code:: bash
+
+       MPW_TAG=<new_tag> make precheck
+
+
 Caravel Integration
 ===================
 
@@ -217,26 +211,9 @@ Caravel Integration
 Repo Integration
 ----------------
 
-Caravel files are kept separate from the user project by having caravel
-as submodule. The submodule commit should point to the latest of
-caravel/caravel-lite master/main branch. The following files should have a symbolic
-link to `caravel's <https://github.com/efabless/caravel.git>`__
-corresponding files:
-
--  `Openlane Makefile <../../openlane/Makefile>`__: This provides an easier
-   way for running openlane to harden your macros. Refer to `Hardening
-   the User Project Macro using
-   Openlane <#hardening-the-user-project-using-openlane>`__. Also,
-   the makefile retains the openlane summary reports under the signoff
-   directory.
-
--  `Pin order <../../openlane/user_project_wrapper/pin_order.cfg>`__ file for
-   the user wrapper: The hardened user project wrapper macro must have
-   the same pin order specified in caravel's repo. Failing to adhere to
-   the same order will fail the gds integration of the macro with
-   caravel's back-end.
-
-The symbolic links are automatically set when you run ``make install``.
+Caravel and mgmt soc files are kept separate from the user project, when running ``make setup``
+these files are cloned with a specific tag (shuttle tag). caravel-lite is cloned by default,
+which is a lite version of caravel that only has the files needed for a successful user project.
 
 -------------------
 Verilog Integration
@@ -306,7 +283,7 @@ The following values are redefined for assigning to GPIOs.
 - GPIO_MODE_USER_STD_ANALOG
 
 
-MPW_Prececk includes a check to confirm each GPIO is assigned a valid value.
+MPW_Precheck includes a check to confirm each GPIO is assigned a valid value.
 
 -------------------
 Layout Integration
@@ -338,7 +315,6 @@ Then, run the RTL simulation by
 
 .. code:: bash
 
-    export PDK_ROOT=<pdk-installation-path>
     make verify-<testbench-name>-rtl
     
     # For example
@@ -350,22 +326,10 @@ Run the gate-level simulation by:
 
 .. code:: bash
 
-    export PDK_ROOT=<pdk-installation-path>
     make verify-<testbench-name>-gl
 
     # For example
     make verify-io_ports-gl
-
-To make sure that your design is timing clean, one way is running sdf annotated gate-level simulation
-Run the sdf annotated gate-level simulation by: 
-
-.. code:: bash
-
-    export PDK_ROOT=<pdk-installation-path>
-    make verify-<testbench-name>-gl-sdf
-
-    # For example
-    make verify-io_ports-gl-sdf
 
 This sample project comes with four example testbenches to test the IO port connection, wishbone interface, and logic analyzer. The test-benches are under the
 `verilog/dv <https://github.com/efabless/caravel_user_project/tree/main/verilog/dv>`__ directory. For more information on setting up the
@@ -416,8 +380,6 @@ You will need to install openlane by running the following
 
 .. code:: bash
 
-   export OPENLANE_ROOT=<openlane-installation-path>
-
    # you can optionally specify the openlane tag to use
    # by running: export OPENLANE_TAG=<openlane-tag>
    # if you do not set the tag, it defaults to the last verfied tag tested for this project
@@ -444,12 +406,10 @@ openlane:
 | |pic1|                                                       | |pic2|                                     | |pic3|                                     |
 |                                                              |                                            |                                            |
 +--------------------------------------------------------------+--------------------------------------------+--------------------------------------------+
-|           ex: |link1|                                        |                                            |           ex: |link2|                      |
+|           ex: |link1|                                        |                                            |                                            |
 +--------------------------------------------------------------+--------------------------------------------+--------------------------------------------+
 
 .. |link1| replace:: `caravel_user_project <https://github.com/efabless/caravel_user_project>`__
-
-.. |link2| replace:: `caravel_ibex <https://github.com/efabless/caravel_ibex>`__
 
 
 .. |pic1| image:: ./_static/option1.png
@@ -485,7 +445,7 @@ To reproduce hardening this project, run the following:
 
 .. code:: bash
 
-   # DO NOT cd into openlane
+   # From the project root
    
    # Run openlane to harden user_proj_example
    make user_proj_example
@@ -495,49 +455,32 @@ To reproduce hardening this project, run the following:
 
 For more information on the openlane flow, check `README <https://github.com/The-OpenROAD-Project/OpenLane#readme>`__.
 
-Runing transistor level LVS
+Crucial steps for integrating project inside ``user_project_wrapper``:
+
+#. Instantiate your module(s) in ``verilog/rtl/user_project_wrapper.v`` 
+#. Change the variables ``VERILOG_FILES_BLACKBOX``, ``EXTRA_LEFS``, ``EXTRA_LIBS``, ``EXTRA_SPEFS`` and ``EXTRA_GDS_FILES`` in ``openlane/user_project_wrapper/config.json`` to point to your module
+#. Make sure to adjust the ``openlane/user_project_wrapper/config.json`` file as needed
+#. **DON'T** adjust the pin placement or power ring, this will cause errors in precheck and ultimately in tapeout
+#. Make sure you connect the power correctly, by adjusting ``FP_PDN_MACRO_HOOKS`` to your project's needs
+
+Running transistor level LVS
 ============================
 
-For the design to pass precheck, a custom lvs configuration file for your design is needed, config file can be found under `lvs/<design_name>/lvs_config.json`
+For the design to pass precheck, a custom lvs configuration file for your design is needed, config file can be found under ``lvs/<design_name>/lvs_config.json``
 
-The `lvs_config.json` files are a possibly hierarchical set of files to set parameters for device level LVS
+The ``lvs_config.json`` files are a possibly hierarchical set of files to set parameters for device level LVS
 
 Required variables:
+
 - **TOP_SOURCE** : Top source cell name.
 - **TOP_LAYOUT** : Top layout cell name.
 - **LAYOUT_FILE** : Layout gds data file. 
 - **LVS_SPICE_FILES** : A list of spice files.
 - **LVS_VERILOG_FILES** : A list of verilog files. Note: files with child modules should be listed before parent modules. Not needed for purely analog designs.
 
-Files must be defined as a absolute path beginning with a shell variable such as `$PDK_ROOT` or `$UPRJ_ROOT`.
+Files must be defined as a absolute path beginning with a shell variable such as ``$PDK_ROOT`` or ``$UPRJ_ROOT``.
 
-Optional variable lists: 
-Hierarchical config files:
-- **INCLUDE_CONFIGS** : List of configuration files to read recursively.
-
-Extraction related. `*` may be used as a wild card character.
-- **EXTRACT_FLATGLOB** : List of cell names to flatten before extraction. 
-  Cells without text tend to work better if flattened.
-  Note: it is necessary to flatten all sub cells of any cells listed.
-- **EXTRACT_ABSTRACT** : List of cells to extract as abstract devices.
-  Normally, cells that do not contain any devices will be flattened during netlisting.
-  Using this variable can prevent unwanted flattening of empty cells.
-  This has no effect of cells that are flattened because of a small number of layers.
-  Internal connectivity is maintained (at least at the top level).
-
-LVS related. `*` may be used as a wild card character.
-- **LVS_FLATTEN** : List of cells to flatten before comparing,
-        Sometimes matching topologies with mismatched pins cause errors at a higher level.
-        Flattening these cells can yield a match.
-- **LVS_NOFLATTEN** : List of cells not to be flattened in case of a mismatch.
-        Lower level errors can propagate to the top of the chip resulting in long run times.
-        Specify cells here to prevent flattening. May still cause higher level problems if there are pin mismatches.
-- **LVS_IGNORE** : List of cells to ignore during LVS.
-        Cells ignored result in LVS ending with a warning.
-        Generally, should only be used when debugging and not on the final netlist.
-        Ignoring cells results in a non-zero return code.
-
-**NOTE**: Missing files and undefined variables result in fatal errors.
+For more information on LVS please check `Precheck's backend check documentation <https://github.com/efabless/mpw_precheck/tree/main/checks/be_checks#readme>`__
 
 Running MPW Precheck Locally
 =================================
@@ -547,7 +490,7 @@ You can install the `mpw-precheck <https://github.com/efabless/mpw_precheck>`__ 
 .. code:: bash
 
    # By default, this install the precheck in your home directory
-   # To change the installtion path, run "export PRECHECK_ROOT=<precheck installation path>" 
+   # To change the installation path, run "export PRECHECK_ROOT=<precheck installation path>" 
    make precheck
 
 This will clone the precheck repo and pull the latest precheck docker image. 
@@ -574,7 +517,7 @@ Start by updating the Makefile for your project.  Starting in the project root..
 
 .. code:: bash
   
-   curl -k https://raw.githubusercontent.com/efabless/caravel_user_project/main/Makefile > Makefile
+   curl -k https://raw.githubusercontent.com/efabless/caravel_user_project/gf180mcu/Makefile > Makefile
    
    make setup-timing-scripts
    
@@ -590,6 +533,8 @@ Then, you can run then run timing by the following...
 
 .. code:: bash
 
+   make caravel-extract-parasitics
+
    make extract-parasitics
    
    make create-spef-mapping
@@ -598,52 +543,6 @@ Then, you can run then run timing by the following...
    
 
 A summary of timing results is provided at the end of the flow. 
-
-
-Other Miscellaneous Targets
-============================
-
-The makefile provides a number of useful that targets that can run LVS, DRC, and XOR checks on your hardened design outside of openlane's flow. 
-
-Run ``make help`` to display available targets. 
-
-Run lvs on the mag view, 
-
-.. code:: bash
-
-   make lvs-<macro_name>
-
-Run lvs on the gds, 
-
-.. code:: bash
-
-   make lvs-gds-<macro_name>
-
-Run lvs on the maglef, 
-
-.. code:: bash
-
-   make lvs-maglef-<macro_name>
-
-Run drc using magic,
-
-.. code:: bash
-
-   make drc-<macro_name>
-
-Run antenna check using magic, 
-
-.. code:: bash
-
-   make antenna-<macro_name>
-
-Run XOR check, 
-
-.. code:: bash
-
-   make xor-wrapper
-   
-   
 
 
 Checklist for Open-MPW Submission

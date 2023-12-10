@@ -31,6 +31,26 @@ void main(){
     GPIOs_loadConfigs(); // load the configuration 
     // configure la 64 (clk enable by la) as output from cpu
     // writing 1 in bit 64(first bit in reg 2) to reset 
+    #ifdef GF180
+    LogicAnalyzer_write(1,0);
+    LogicAnalyzer_outputEnable(1, 0x3FFFFFFF);
+    // reset counter 
+    // reset 1
+    LogicAnalyzer_write(1,0xC0000000); // clk pose edge
+    LogicAnalyzer_write(1,0x80000000);// clk neg edge
+    // reset 0
+    LogicAnalyzer_write(1,0x40000000); // clk pose edge
+    LogicAnalyzer_write(1,0x00000000);// clk neg edge
+
+    ManagmentGpio_write(1); // configuration finished
+
+    for (int i = 0; i < 7; i++){
+        LogicAnalyzer_write(1,0x40000000); // clk pose edge
+        ManagmentGpio_write(0); 
+        LogicAnalyzer_write(1,0x00000000);// clk neg edge
+        ManagmentGpio_write(1); 
+        }
+    #else 
     LogicAnalyzer_write(2,0);
     // LogicAnalyzer_inputEnable(2,0x1);
     LogicAnalyzer_outputEnable(2,0xFFFFFFFC);
@@ -50,5 +70,6 @@ void main(){
         LogicAnalyzer_write(2,0);// clk pose edge
         ManagmentGpio_write(1); 
         }
+    #endif // GF180
     return;
 }
