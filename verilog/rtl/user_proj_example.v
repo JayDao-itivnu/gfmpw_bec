@@ -34,7 +34,7 @@
  *
  *-------------------------------------------------------------
  */
-
+`include "add.v"
 module user_proj_example (
 `ifdef USE_POWER_PINS
     inout vdd,	// User area 1 1.8V supply
@@ -46,26 +46,26 @@ module user_proj_example (
     input wb_rst_i,
   
     // Logic Analyzer Signals
-    input  [63:0] la_data_in,
+    input  [36:32] la_data_in,
     output [63:0] la_data_out,
-    input  [63:0] la_oenb
+    input  [63:32] la_oenb,
 
     // IOs
     // input io_in,
-    // output [2:0] io_out
+    output [2:0] io_out
 );
     reg [2:0] reg_num1, reg_num2;
+	reg [2:0] num_2, num_1;
 
     //wire [BITS-1:0] count;
-    wire [2:0] sum, status;
-    wire done;
-    //wire done;
-    wire wena;
-    //wire valid;
-    // wire [3:0] wstrb;
+    wire [2:0] sum;
+	reg [2:0] status;
+    wire done, wena, busy;
+	wire clk, rst;
+
     wire [31:0] la_write;
     // LA
-    assign la_data_out = {{(63-3){1'b0}}, sum};
+    assign la_data_out = {{(63-2){1'b0}}, sum};
 
     // Assuming LA probes [63:32] are for controlling the count register  
     assign la_write = ~la_oenb[63:32];
@@ -74,28 +74,70 @@ module user_proj_example (
     assign clk = wb_clk_i;
     assign rst = wb_rst_i;
     // Assuming LA probes [36] controls the wena;
-    assign wena = la_data_in[36];
-
+    assign wena = |la_write && ~ la_data_in[36];
+	assign busy = la_data_in[36];
     // Assign the IO output to observe the status of BEC's FSM 
     assign io_out = status;
+	reg [1:0] current_state;
+	reg [1:0] next_state;
+	parameter IDLE = 2'b00, WRITE = 2'b01, BUSY = 2'b10, DONE = 2'b11;	
 
+	always @(wena, busy, done) begin
+		case (current_state) 
+			IDLE: begin
+				status <= 3'b000;
+				if (wena) begin
+					next_state <= WRITE;
+				end else begin
+					next_state <= IDLE;
+				end
+			end
+
+			WRITE: begin
+				status <= 3'b100;
+
+				if (busy) begin
+					next_state <= BUSY;
+				end else begin
+					next_state <= WRITE;
+					case (la_data_in[35])
+						1'b0: begin
+							num_1 <= la_data_in[34:32];
+						end
+						1'b1:begin
+							num_2 <= la_data_in[34:32];
+						end
+					endcase; 
+				end
+				
+			end
+
+			BUSY: begin
+				status <= 3'b010;
+				if (done) begin
+					next_state <= DONE;
+				end else begin
+					next_state <= BUSY;
+				end
+			end
+
+			DONE: begin
+				status <= 3'b001;
+				next_state <= IDLE;
+			end
+		endcase
+	end
+	
     always @(posedge clk) begin
         if (rst) begin
             reg_num1 <= 0;
             reg_num2 <= 0;
-        end
-        else begin
-            if (|la_write && ~wena)  begin
-                case (la_data_in[35])
-                    1'b0: begin
-                        reg_num1 <= la_data_in[34:32];
-                    end
-                    1'b1:begin
-                        reg_num2 <= la_data_in[34:32];
-                    end
-                endcase;
-            end       
-        end
+			current_state <= IDLE;
+        end else begin
+            reg_num1 <= num_1;
+            reg_num2 <= num_2;
+			current_state <= next_state;
+		end
     end
 
 
@@ -107,115 +149,98 @@ module user_proj_example (
         .reset(rst),
         .num1(reg_num1),
         .num2(reg_num2),
-        // .la_write(la_write),
-        // .la_input(la_data_in[36:32]),
-        .status(status),
-        .wena(wena),
+        .enable(busy),
         .done(done),
         .sum(sum)
     );
 
 endmodule
 
-module add(
-    input clk,
-    input reset,
-    // input [31:0] la_write,
-    input [2:0] num1,
-    input [2:0] num2,
-    // input [4:0] la_input,
-    input wena,
-    output [2:0] status,
-    output done,
-    output [2:0] sum
+// module add(
+//     input clk,
+//     input reset,
+//     input [2:0] num1,
+//     input [2:0] num2,
+//     input enable,
+//     output done,
+//     output reg [2:0] sum
     
-);
-reg [2:0] sum;
-reg done;
-reg data_ready;
-reg [2:0] count;
-reg busy;
-parameter IDLE = 2'b00, READY = 2'b01, BUSY = 2'b10, DONE = 2'b11;
-// assign busy = (current_state == BUSY) ? 1 : 0;
+// );
+// reg reg_done;
+// reg [9:0] count;
 
-reg current_state;
-wire next_state;
-assign status = data_ready << 2 | busy << 1 | done ;
+// parameter IDLE = 2'b00, BUSY = 2'b10, DONE = 2'b11;
+// // assign busy = (current_state == BUSY) ? 1 : 0;
 
-always @(posedge clk )
-    begin
-        if(reset)
-            current_state <= IDLE;
-        else 
-            current_state <= next_state;
-    end
+// assign done = reg_done;
 
-always@(wena, done) begin
-    case(current_state)
-        IDLE: begin
-            if (wena) begin
-                next_state <= READY;
-            end else begin
-                next_state <= IDLE;
-            end
-        end
+// reg [1:0] current_state;
+// reg [1:0] next_state;
 
-        READY: begin
-            next_state <= BUSY;
-        end
+// always @(posedge clk )
+//     begin
+//         if(reset)
+//             current_state <= IDLE;
+//         else 
+//             current_state <= next_state;
+//     end
 
-        BUSY: begin
-            if (done) begin
-                next_state <= DONE;
-            end else begin
-                next_state <= BUSY;
-            end
-        end
+// always@(enable, reg_done) begin
+//     case(current_state)
+//         IDLE: begin
+//             if (enable) begin
+//                 next_state <= BUSY;
+//             end else begin
+//                 next_state <= IDLE;
+//             end
+//         end
 
-        DONE: begin
-            next_state <= IDLE;
-        end
-    endcase
-end
+//         BUSY: begin
+//             if (reg_done) begin
+//                 next_state <= DONE;
+//             end else begin
+//                 next_state <= BUSY;
+//             end
+//         end
+
+//         DONE: begin
+//             next_state <= IDLE;
+//         end
+// 		default: next_state <= IDLE;
+//     endcase
+// end
 
 
-always @(posedge clk) begin
-    if (reset) begin
-        done        <= 1'b0;
-        busy        <= 1'b0;
-        data_ready  <= 1'b0;
-        count       <= 3'b0;
-    end
-    else begin
-        case (current_state)
-            IDLE: begin
-                done        <= 1'b0;
-                busy        <= 1'b0;
-                data_ready  <= 1'b0;
-                count       <= 3'b0;
-            end    
+// always @(posedge clk) begin
+//     if (reset) begin
+//         reg_done    <= 1'b0;
+//         count       <= 10'h000;
+//     end
+//     else begin
+//         case (current_state)
+//             IDLE: begin
+//                 reg_done    <= 1'b0;
+// 				count       <= 10'h000;
+//             end    
 
-            READY: begin
-                data_ready <= 1'b1;
-            end
+//             BUSY: begin
+//                 count <= count + 1; 
+//                 if (count == 10'h3FF) begin
+//                     reg_done <= 1'b1;
+//                 end else begin
+//                     reg_done <= 1'b0;
+//                 end
+//             end
 
-            BUSY: begin
-                busy <= 1'b1;
-                data_ready <= 1'b0;
-
-                count <= count + 1; 
-                if (count == 4) begin
-                    done <= 1'b1;
-                end else begin
-                    done <= 1'b0;
-                end
-            end
-
-            DONE: begin
-                sum <= num1 + num2;
-            end
-        endcase   
-    end
-end
-endmodule
+//             DONE: begin
+//                 sum <= num1 + num2;
+//             end
+// 			default: begin
+// 				reg_done    <= 1'b0;
+// 				count       <= 10'h000;
+// 			end
+//         endcase   
+//     end
+// end
+// endmodule
 `default_nettype wire
