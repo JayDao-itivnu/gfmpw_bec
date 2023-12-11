@@ -22,7 +22,7 @@ module la_test1_tb;
     reg RSTB;
 	reg CSB;
 
-	reg power1, power2;
+	reg power1;
 
 	wire gpio;
 	wire uart_tx;
@@ -89,11 +89,8 @@ module la_test1_tb;
 
 	initial begin		// Power-up sequence
 		power1 <= 1'b0;
-		power2 <= 1'b0;
 		#200;
 		power1 <= 1'b1;
-		#200;
-		power2 <= 1'b1;
 	end
 
 	wire flash_csb;
@@ -101,35 +98,17 @@ module la_test1_tb;
 	wire flash_io0;
 	wire flash_io1;
 
-	wire VDD1V8;
-	wire VDD3V3;
+	wire VDD;
 	wire VSS;
     
-	assign VDD3V3 = power1;
-	assign VDD1V8 = power2;
+	assign VDD = power1;
 	assign VSS = 1'b0;
 	assign mprj_io[3] = 1;  // Force CSB high.
 	assign mprj_io[0] = 0;  // Disable debug mode
 
 	caravel uut (
-		.vddio	  (VDD3V3),
-		.vddio_2  (VDD3V3),
-		.vssio	  (VSS),
-		.vssio_2  (VSS),
-		.vdda	  (VDD3V3),
-		.vssa	  (VSS),
-		.vccd	  (VDD1V8),
-		.vssd	  (VSS),
-		.vdda1    (VDD3V3),
-		.vdda1_2  (VDD3V3),
-		.vdda2    (VDD3V3),
-		.vssa1	  (VSS),
-		.vssa1_2  (VSS),
-		.vssa2	  (VSS),
-		.vccd1	  (VDD1V8),
-		.vccd2	  (VDD1V8),
-		.vssd1	  (VSS),
-		.vssd2	  (VSS),
+		.VDD (VDD),
+		.VSS (VSS),
 		.clock    (clock),
 		.gpio     (gpio),
 		.mprj_io  (mprj_io),
